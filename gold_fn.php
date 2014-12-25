@@ -1,6 +1,7 @@
 <?php
 $data[] = get_esunbank();
 $data[] = get_taiwanbank();
+$data[] = get_huananbank();
 
 echo json_encode($data);
 
@@ -10,6 +11,20 @@ echo json_encode($data);
 function get_html($url) {
 	$page_content = file_get_contents($url);
 	return str_replace(array("\r\n","\n"), array("",""), $page_content);
+}
+
+/**
+* 移除,
+*/
+function money2number($money) {
+	return str_replace(",", "", $money);
+}
+
+/**
+* 取得價差
+*/
+function get_spread($sell, $buy) {
+	return money2number($sell) - money2number($buy);
 }
 
 function get_esunbank() {
@@ -26,7 +41,10 @@ function get_esunbank() {
 	} else {
 			return array(0=>"掛了 Orz...");
 	}
-	return array(0=>"玉山銀行", 1=>$matches2[1][1], 2=>$matches2[1][2]);
+	return array(0=>"玉山銀行", 
+	             1=>$matches2[1][2], 
+				 2=>$matches2[1][1], 
+				 3=>get_spread($matches2[1][2], $matches2[1][1]));
 }
 
 function get_taiwanbank() {
@@ -42,7 +60,26 @@ function get_taiwanbank() {
 	} else {
 		return array(0=>"掛了 Orz...");
 	}
-	return array(0=>"台灣銀行", 1=>number_format($matches2[1][13]), 2=>number_format($matches2[1][6]));
+	return array(0=>"台灣銀行", 
+	             1=>number_format($matches2[1][6]), 
+				 2=>number_format($matches2[1][13]), 
+				 3=>get_spread($matches2[1][6], $matches2[1][13]));
 }
 
+function get_huananbank() {
+	$page_content = get_html("http://ibank.hncb.com.tw/netbank/pages/jsp/IportalApplet/GoldBankBookHtml.html");
 
+	if(preg_match_all('/<td(.*)>(.*)<\/td>/U', $page_content, $matches)) {
+
+	} else {
+		return array(0=>"掛了 Orz...");
+	}
+	
+	$sell = substr($matches[2][5], 0, -5);
+	$buy = substr($matches[2][4], 0, -5);
+	
+	return array(0=>"華南銀行", 
+	             1=>number_format($sell), 
+				 2=>number_format($buy), 
+				 3=>get_spread($sell, $buy));
+}
