@@ -4,16 +4,33 @@
 <body>
 <table border="1">
 </table>
+<input type="button" id="hand_reload" value="手動刷新" disabled="true" />
+<input type="button" id="auto_reload" value="自動刷新" disabled="true" />
+<input type="button" id="stop_reload" value="取消自動刷新" disabled="true" />
 <div id="cd"></div>
 <div id="now_time"></div>
 <script src="//code.jquery.com/jquery-2.1.3.min.js"></script>
 <script type="text/javascript">
 	$(function() {
 		var reload_time = 60;
-		var reload_time2 = 60;
+		var reload_time2 = reload_time;
+		var auto_reload_id = 0;
+		var cd_id = 0;
 		
-		var get_gold_info = function() {
-			console.log("go");
+		function cd() {
+			$("div#cd").html("剩" + reload_time + "秒刷新.");
+			reload_time--;
+			if(reload_time<0) {
+				clearTimeout(cd_id);
+				reload_time = reload_time2;
+				$("div#cd").html("更新中.");
+				get_gold_info();
+			} else {
+				cd_id = setTimeout(arguments.callee, 1000);
+			}
+		};
+		
+		function get_gold_info() {
 			var now_time = new Date($.now());
 			$.ajax({
 				url: "gold_fn.php",
@@ -32,27 +49,61 @@
 					}
 					$("table").html(text);
 					$("div#now_time").html("時間: " + now_time);
+					cd();
+					$("input#hand_reload").attr("disabled", false);
+					$("input#stop_reload").attr("disabled", false);
 				},
 				error: function(xhr, ajaxOptions, thrownError){ 
 				   console.log(xhr.status); 
 				   console.log(thrownError); 
 				}
-			});		
+			});
 		};
 
-		var cd = function() {
-			$("div#cd").html("剩" + reload_time + "秒刷新.");
-			console.log(reload_time--);
-			if(reload_time==0) {
-				reload_time = reload_time2;
-			}
-			
-			setTimeout(arguments.callee, 1000);
-		};
+		function init() {
+			$("div#cd").html("讀取中.");
+		}
 		
+		//手動刷新
+		$("input#hand_reload").on("click", function() {
+			$("input#auto_reload").attr("disabled", true);
+			$("input#stop_reload").attr("disabled", false);
+			if(cd_id != 0) {
+				clearTimeout(cd_id);
+			}
+			reload_time = reload_time2;
+			$("div#cd").html("手動更新.");
+			get_gold_info();
+		});
+
+		//自動刷新
+		$("input#auto_reload").on("click", function() {
+			$("input#auto_reload").attr("disabled", true);
+			$("input#stop_reload").attr("disabled", false);
+			if(cd_id != 0) {
+				clearTimeout(cd_id);
+			}
+			reload_time = reload_time2;
+			get_gold_info();
+		});
+		
+		//停止手動刷新
+		$("input#stop_reload").on("click", function() {
+			$("input#auto_reload").attr("disabled", false);
+			$("input#stop_reload").attr("disabled", true);
+			if(cd_id == 0) {
+				alert("已停止自動更新.");
+				return false;
+			}
+			clearTimeout(cd_id);
+			cd_id = 0;
+			reload_time = reload_time2;
+			$("div#cd").html("停止自動更新.");
+		});
+		
+		init();
 		get_gold_info();
-		cd();
-		setInterval(get_gold_info, reload_time2*1000); // 10s
+
 	});
 </script>
 </body>
